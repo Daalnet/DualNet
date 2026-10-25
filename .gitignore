@@ -1,0 +1,11 @@
+# Build output (published on the Releases page instead)
+DualNet.exe
+DualNet.old*.exe
+DualNet.new.exe
+
+# Per-computer settings and data usage
+settings-*.txt
+usage*.txt
+*.tmp
+
+_test/

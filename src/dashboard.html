@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DualNet</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --ok: #1f9d55; --bad: #d64545; --off: #9aa1ae; --accent: #2f6fde; --accent2: #e08a1e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171d; --card: #1d2129; --text: #e7e9ee; --muted: #9098a8; --line: #2c313c;
+            --ok: #3cc47c; --bad: #f06a6a; --off: #646b78; --accent: #5b92f0; --accent2: #f0a345; }
+  }
+  @font-face { font-family: "Vazirmatn"; src: url("/fonts/Vazirmatn.woff2") format("woff2");
+               font-weight: 100 900; font-display: swap; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: "Vazirmatn", Tahoma, sans-serif; font-size: 15px; }
+  button, input { font-family: inherit; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .num { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+  .total { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 20px 0; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { color: var(--muted); font-size: 13px; }
+  .tile .v { font-size: 24px; font-weight: 600; margin-top: 4px; }
+  .share { height: 10px; border-radius: 5px; overflow: hidden; display: flex; background: var(--line); margin: 6px 0 20px; }
+  .share div { height: 100%; transition: width .6s; }
+  .links { display: grid; gap: 12px; }
+  .link { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .link.disabled { opacity: .55; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .name { font-weight: 600; font-size: 17px; }
+  .state { font-size: 13px; color: var(--muted); }
+  .spacer { flex: 1; }
+  button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+           background: transparent; color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
+  .grid .k { color: var(--muted); font-size: 12px; }
+  .grid .v { font-size: 16px; margin-top: 2px; }
+  svg.spark { width: 100%; height: 48px; margin-top: 12px; display: block; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+  .help { margin-top: 28px; color: var(--muted); font-size: 13px; line-height: 1.9; }
+  .help code { direction: ltr; unicode-bidi: isolate; background: var(--card); border: 1px solid var(--line);
+               padding: 1px 6px; border-radius: 4px; }
+  .err { color: var(--bad); }
+  .modes { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .modes button { border: 0; border-radius: 0; padding: 8px 14px; }
+  .modes button.on { background: var(--accent); color: #fff; }
+  .modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+  .badge.first { border-color: var(--ok); color: var(--ok); }
+  .badge.full { border-color: var(--accent2); color: var(--accent2); }
+  .badge.cap { border-color: var(--bad); color: var(--bad); }
+  .usage { margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .usage .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; direction: ltr; }
+  .usage .bar div { height: 100%; background: var(--accent2); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>DualNet</h1>
+    <span class="sub" id="info"></span>
+  </header>
+
+  <div class="modebar" id="modebar" style="display:none">
+    <div class="modes">
+      <button id="mCheap" onclick="setMode(1)">اولویت‌دار (ارزان)</button>
+      <button id="mFast" onclick="setMode(0)">همه با هم (سریع)</button>
+    </div>
+    <span class="sub" id="modeHelp"></span>
+  </div>
+
+  <section class="total">
+    <div class="tile"><div class="k">سرعت دانلود کل</div><div class="v num" id="tDown">–</div></div>
+    <div class="tile"><div class="k">سرعت آپلود کل</div><div class="v num" id="tUp">–</div></div>
+    <div class="tile"><div class="k">اتصال‌های باز</div><div class="v num" id="tAct">–</div></div>
+    <div class="tile"><div class="k">اینترنت‌های فعال</div><div class="v" id="tLinks">–</div></div>
+  </section>
+
+  <div class="sub">سهم هر اینترنت از دانلود فعلی</div>
+  <div class="share" id="share"></div>
+
+  <section class="links" id="links"></section>
+
+  <section class="help">
+    برای استفاده، در برنامه‌ها پراکسی را روی <code id="addr">127.0.0.1:1080</code> بگذارید
+    (نوع SOCKS5 یا HTTP؛ هر دو روی همین پورت کار می‌کنند).
+    بیشترین فایده را در دانلود منیجرهای چنداتصاله (IDM، تورنت) و مرورگر می‌بینید.
+    یک دانلود تک‌اتصاله همیشه فقط از یک اینترنت می‌رود.
+  </section>
+</main>
+
+<script>
+const COLORS = ['var(--accent)', 'var(--accent2)', '#8e5bd8', '#1aa3a3'];
+const $ = id => document.getElementById(id);
+
+function rate(b) {
+  if (b < 1024) return Math.round(b) + ' B/s';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB/s';
+  return (b / 1048576).toFixed(2) + ' MB/s';
+}
+function size(b) {
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function spark(hist, color) {
+  const max = Math.max(1, ...hist);
+  const w = 300, h = 48, step = w / (hist.length - 1);
+  const pts = hist.map((v, i) => (i * step).toFixed(1) + ',' + (h - 2 - (v / max) * (h - 6)).toFixed(1));
+  // RTL page, but time should still flow left-to-right like a normal chart.
+  return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="direction:ltr">' +
+    '<polyline fill="none" stroke="' + color + '" stroke-width="2" vector-effect="non-scaling-stroke" points="' + pts.join(' ') + '"/></svg>';
+}
+
+function state(l) {
+  if (!l.present) return ['قطع', 'var(--off)'];
+  if (!l.enabled) return ['خاموش (توسط شما)', 'var(--off)'];
+  if (!l.healthy) return ['بدون اینترنت', 'var(--bad)'];
+  return ['آنلاین' + (l.latency >= 0 ? ' · پینگ ' + l.latency + ' ms' : ''), 'var(--ok)'];
+}
+
+async function setMode(cheap) {
+  await fetch('/api/mode?cheap=' + cheap, { method: 'POST', headers: { 'X-DualNet': '1' } });
+  load();
+}
+
+async function post(url) {
+  await fetch(url, { method: 'POST', headers: { 'X-DualNet': '1' } });
+  load();
+}
+function prefer(id) { post('/api/prefer?id=' + encodeURIComponent(id)); }
+function setSpeed(id, name, cur) {
+  const v = prompt('سرعت خط «' + name + '» به مگابیت (مثلاً 16).\nخالی بگذارید تا برنامه خودش یاد بگیرد.', cur > 0 ? cur : '');
+  if (v === null) return;
+  const n = parseFloat(v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+  post('/api/speed?id=' + encodeURIComponent(id) + '&mbps=' + (isFinite(n) && n > 0 ? n : 0));
+}
+
+async function toggle(id) {
+  await fetch('/api/toggle?id=' + encodeURIComponent(id), { method: 'POST', headers: { 'X-DualNet': '1' } });
+  load();
+}
+
+function render(d) {
+  $('addr').textContent = '127.0.0.1:' + d.port;
+  $('info').textContent = (d.sticky ? 'حالت چسبنده' : '') +
+    (d.systemProxy ? (d.sticky ? ' · ' : '') + 'پراکسی ویندوز روشن است' : '');
+  $('modebar').style.display = d.links.length > 1 ? 'flex' : 'none';
+  $('mCheap').style.display = d.prefer ? '' : 'none';
+  $('mCheap').className = d.cheap ? 'on' : '';
+  $('mFast').className = d.cheap ? '' : 'on';
+  $('modeHelp').textContent = !d.prefer
+    ? 'برای اینکه یک اینترنت اول استفاده شود، روی کارتش «اولویت با این» را بزنید.'
+    : d.cheap
+      ? 'همه چیز از ' + d.prefer + ' می‌رود؛ بقیه فقط وقتی پر یا قطع است.'
+      : 'اتصال‌ها بین همه‌ی اینترنت‌ها پخش می‌شوند.';
+
+  const links = d.links;
+  const totDown = links.reduce((a, l) => a + l.rateDown, 0);
+  $('tDown').textContent = rate(totDown);
+  $('tUp').textContent = rate(links.reduce((a, l) => a + l.rateUp, 0));
+  $('tAct').textContent = links.reduce((a, l) => a + l.active, 0);
+  $('tLinks').textContent = links.filter(l => l.present && l.healthy && l.enabled).length + ' از ' + links.length;
+
+  $('share').innerHTML = links.map((l, i) =>
+    '<div title="' + esc(l.name) + '" style="background:' + COLORS[i % COLORS.length] +
+    ';width:' + (totDown > 0 ? (l.rateDown / totDown * 100) : 0) + '%"></div>').join('');
+
+  if (!links.length) {
+    $('links').innerHTML = '<div class="empty">هیچ اینترنتی پیدا نشد. کابل LAN و Wi-Fi را وصل کنید.</div>';
+    return;
+  }
+  $('links').innerHTML = links.map((l, i) => {
+    const [st, col] = state(l);
+    const c = COLORS[i % COLORS.length];
+    const per = d.period === 'day' ? 'امروز' : 'این ماه';
+    const badges =
+      (l.preferred ? '<span class="badge first">اولویت</span>' : '') +
+      (l.preferred && d.cheap && l.busy ? '<span class="badge full">پر است، اضافه به بقیه می‌رود</span>' : '') +
+      (l.overLimit ? '<span class="badge cap">به سقف مصرف رسید</span>' : '');
+    const usage = '<div class="usage">مصرف ' + per + ' (فقط از DualNet): <span class="num">' + size(l.used) +
+      (l.limit > 0 ? ' / ' + size(l.limit) : '') + '</span>' +
+      (l.limit > 0 ? '<div class="bar"><div style="width:' + Math.min(100, l.used / l.limit * 100).toFixed(1) + '%"></div></div>' : '') +
+      '</div>';
+    return '<div class="link' + (l.enabled ? '' : ' disabled') + '">' +
+      '<div class="row"><span class="dot" style="background:' + col + '"></span>' +
+      '<span class="name">' + esc(l.name) + '</span>' +
+      badges + '<span class="state">' + st + '</span><span class="spacer"></span>' +
+      '<span class="sub num">' + esc(l.ip) + ' → ' + esc(l.gw) + '</span>' +
+      (l.preferred
+        ? '<button onclick="prefer(\'\')">برداشتن اولویت</button>'
+        : '<button onclick="prefer(\'' + esc(l.id) + '\')">اولویت با این</button>') +
+      '<button onclick="setSpeed(\'' + esc(l.id) + '\',\'' + esc(l.name) + '\',' + l.speedMbps + ')">سرعت خط: ' +
+        (l.speedMbps > 0 ? '<span class="num">' + l.speedMbps + ' Mbps</span>' : 'خودکار') + '</button>' +
+      '<button onclick="toggle(\'' + esc(l.id) + '\')">' + (l.enabled ? 'خاموش کن' : 'روشن کن') + '</button></div>' +
+      '<div class="grid">' +
+        '<div><div class="k">دانلود</div><div class="v num" style="color:' + c + '">' + rate(l.rateDown) + '</div></div>' +
+        '<div><div class="k">آپلود</div><div class="v num">' + rate(l.rateUp) + '</div></div>' +
+        '<div><div class="k">اتصال باز</div><div class="v num">' + l.active + '</div></div>' +
+        '<div><div class="k">مجموع دانلود</div><div class="v num">' + size(l.down) + '</div></div>' +
+        '<div><div class="k">کل اتصال‌ها / خطا</div><div class="v num">' + l.conns + ' / ' + l.fails + '</div></div>' +
+        (l.weight !== 1 ? '<div><div class="k">وزن</div><div class="v num">' + l.weight + '</div></div>' : '') +
+      '</div>' + spark(l.hist, c) + usage + '</div>';
+  }).join('');
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/stats', { cache: 'no-store' });
+    render(await r.json());
+  } catch (e) {
+    $('info').innerHTML = '<span class="err">DualNet در حال اجرا نیست</span>';
+  }
+}
+load();
+setInterval(load, 1000);
+</script>
+</body>
+</html>
