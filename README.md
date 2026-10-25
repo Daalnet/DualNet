@@ -2,7 +2,11 @@
 
 **Use two internet connections at the same time on Windows** — e.g. LAN on one modem and Wi-Fi on another.
 
-[راهنمای فارسی ←](README-fa.md)
+<div dir="rtl">
+
+**[راهنمای کامل فارسی](README-fa.md)**: دانلود و اجرا، داشبورد، اولویت و سقف مصرف، تنظیم IDM و تورنت، استفاده همراه VPN، و عیب‌یابی.
+
+</div>
 
 DualNet is a small local proxy (SOCKS5 + HTTP on one port). Every new connection is sent out through one of your network adapters, so downloads that open several connections (IDM, torrents, browsers) get close to the **sum** of both lines. If one line drops, new connections go through the other.
 
